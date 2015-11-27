@@ -1,0 +1,9 @@
+{
+    "compilerOptions": {
+        "target": "ES6",
+        "noImplicitAny": true,
+        "outDir": "../lib",
+        "sourceMap": true,
+        "declaration": true
+    }
+}
