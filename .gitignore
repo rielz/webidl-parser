@@ -3,4 +3,5 @@
 *.d.ts
 
 lib/
+cmd/node_modules/
 .vscode/
