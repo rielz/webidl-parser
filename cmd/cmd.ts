@@ -1,5 +1,5 @@
-/// <reference path="node.d.ts" />
-/// <reference path="jsdom.d.ts" />
+/// <reference path="typings/node/node.d.ts" />
+/// <reference path="typings/jsdom/jsdom.d.ts" />
 /// <reference path="../src/tokenizer.ts" />
 /// <reference path="../src/parser.ts" />
 /// <reference path="../src/webidl.ts" />
@@ -17,52 +17,58 @@ import * as webidl from "../src/webidl";
 const input = "http://www.w3.org/html/wg/drafts/html/master/single-page.html";
 const output = "../specs/html5.d.ts";
 
+function extract(doc: Document): string {
+	let elements = window.document.querySelectorAll("pre.idl:not(.extract)");
+	let parts = Array.from(elements).map((pre) => pre.textContent);
+	return parts.join("\n");
+}
+
+function parse(idl: string): webidl.model.Definition[] {
+	let tokens = tokenize(idl);
+	let rest = Array.from(tokens).filter((token) => token.kind != TokenKind.whitespace && token.kind != TokenKind.comment);
+	let parser = webidl.grammar.Definitions();
+	let result = parser(rest);
+	result.success = result.success && result.rest.length === 1 && result.rest[0].kind === TokenKind.eof;
+	
+	if(result) {
+		return result.value;
+	} else {
+		return null;
+	}
+}
+
+function generate(defs: webidl.model.Definition[]): typescript.model.Statement[] {
+	let generator = new typescript.Generator();
+	return defs.map(def => def.accept(generator)).reduce((list, item) => list.concat(item), []);
+}
+
+function emit(stmts: typescript.model.Statement[]): string {
+	let writer = new typescript.Writer();
+	let emitter = new typescript.Emitter(writer);
+	
+	stmts.forEach((stmt) => {
+		stmt.accept(emitter);
+	});
+	
+	return writer.toString();
+}
+
 jsdom.env(input, function(e, window) {
 	if (e) {
 		console.error("Errors in HTTP/HTML!");
 		return;
 	}
 
-	let elements = window.document.querySelectorAll("pre.idl:not(.extract)");
-	let parts = Array.from(elements).map((pre) => pre.textContent);
-	let idl = parts.join("\n");
-
-	let tokens = tokenize(idl);
-	let rest = Array.from(tokens).filter((token) => token.kind != TokenKind.whitespace && token.kind != TokenKind.comment);
-	let parser = webidl.grammar.Definitions();
-	let result = parser(rest);
-	result.success = result.success && result.rest.length === 1 && result.rest[0].kind === TokenKind.eof;
-
-	if (result.success) {
-		let writer = new typescript.Writer();
-		let emitter = new typescript.Emitter(writer);
-		let generator = new typescript.Generator();
-
-		let statements = result.value.map(def => def.accept(generator)).reduce((list, item) => list.concat(item), []);
-
-		statements.forEach((stmt) => {
-			stmt.accept(emitter);
-		});
-
-		let dts = writer.toString();
-
-		fs.writeFile(output, dts);
-		console.info("written");
-	} else {
-		console.error("Errors in IDL!");
-		
-		for(let err of result.errors) {
-			console.warn(err.message);
-			
-			if(err.got) {
-				let from = err.got.span.position - 100;
-				let to = err.got.span.position + err.got.span.text.length + 100;
-				
-				let part = idl.substring(from, to).replace(/\n/g, "\\n");
-				console.info(part);
-			}
+	let idl = extract(window.document);
+	let defs = parse(idl);
+	let stmts = generate(defs);
+	let tsd = emit(stmts);
+	
+	fs.writeFile(output, tsd, (e) => {
+		if(e) {
+			console.error(e.message);
+		} else {
+			console.info(`generated file '$(output)'.`);
 		}
-		
-		return;
-	}
+	});
 });
