@@ -1,5 +1,8 @@
 "use strict";
 
+/**
+ * 
+ */
 export enum TokenKind {
 	integer,
 	float,
@@ -14,16 +17,37 @@ export enum TokenKind {
 	eof,
 }
 
+/**
+ * 
+ */
 export interface TextSpan {
+	/**
+	 * 
+	 */
 	text: string;
+	/**
+	 * 
+	 */
 	position: number;
 }
 
+/**
+ * 
+ */
 export interface Token {
+	/**
+	 * 
+	 */
 	kind: TokenKind;
+	/**
+	 * 
+	 */
 	span: TextSpan;
 }
 
+/**
+ * 
+ */
 export const KEYWORDS = [
 	"-Infinity", "...", "ArrayBuffer", "ByteString", "DOMException", "DOMString", "DataView", "Error", "Float32Array",
 	"Float64Array", "FrozenArray", "Infinity", "Int16Array", "Int32Array", "Int8Array", "NaN", "Promise", "RegExp",
@@ -34,6 +58,11 @@ export const KEYWORDS = [
 	"typedef", "unrestricted", "unsigned", "void"
 ];
 
+/**
+ * @param input
+ * @param position
+ * @return
+ */
 export default function* tokenize(input: string, position: number = 0): IterableIterator<Token> {
 	const integer_pattern = /-?([1-9][0-9]*|0[Xx][0-9A-Fa-f]+|0[0-7]*)/y;
 	const float_pattern = /-?(([0-9]+\.[0-9]*|[0-9]*\.[0-9]+)([Ee][+-]?[0-9]+)?|[0-9]+[Ee][+-]?[0-9]+)/y;

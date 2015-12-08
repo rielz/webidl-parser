@@ -10,6 +10,10 @@ const COMMON_BUFFERSOURCE = "typedef (ArrayBufferView or ArrayBuffer) BufferSour
 const COMMON_DOMTIMESTAMP = "typedef unsigned long long DOMTimeStamp;";
 const COMMON_FUNCTION = "callback Function = any (any... arguments);";
 const COMMON_VOIDFUNCTION = "callback VoidFunction = void ();";
+
+/**
+ * 
+ */
 export const COMMON = COMMON_ARRAYBUFFERVIEW + COMMON_BUFFERSOURCE + COMMON_DOMTIMESTAMP /*+ COMMON_FUNCTION + COMMON_VOIDFUNCTION*/;
 
 export interface ISyntaxVisitor<T> {
@@ -618,6 +622,9 @@ export namespace grammar {
 		return map(parser, (span) => new type(span));
 	}
 
+	/**
+	 * @return
+	 */
 	export function Definitions(): IParser<model.Definition[]> {
 		return optional(create<model.Definition[]>(function* () {
 			let attributes = yield ExtendedAttributeList();
@@ -1475,5 +1482,17 @@ export namespace grammar {
 
 			return new model.ExtendedAttributeNamedArgList(id, ident, args);
 		});
+	}
+	
+	interface SemanticError {
+		
+	}
+	
+	class Semantic implements ISyntaxVisitor<SemanticError[]> {
+		
+	}
+	
+	class Minifier implements ISyntaxVisitor<void> {
+		
 	}
 }

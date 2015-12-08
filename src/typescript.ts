@@ -16,7 +16,7 @@ export class Writer {
 		this.begin = true;
 	}
 
-	append(...text: string[]): void {
+	append(...text: string[]): Writer {
 		if (this.begin) {
 			this.text += this.tab.repeat(this.indentation);
 			this.begin = false;
@@ -27,11 +27,14 @@ export class Writer {
 		if (text.length > 0) {
 			this.begin = false;
 		}
+		
+		return this;
 	}
 
-	appendln(...text: string[]): void {
+	appendln(...text: string[]): Writer {
 		this.append(...text, this.linebreak);
 		this.begin = true;
+		return this;
 	}
 
 	indent(): number {

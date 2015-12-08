@@ -3,24 +3,61 @@
 
 import { TextSpan, Token, TokenKind } from "./tokenizer";
 
+/**
+ * 
+ */
 export interface IParserResult<T> {
+	/**
+	 * 
+	 */
 	success: boolean;
+	/**
+	 * 
+	 */
 	consumed: boolean;
+	/**
+	 * 
+	 */
 	value: T;
+	/**
+	 * 
+	 */
 	rest: Token[];
+	/**
+	 * 
+	 */
 	errors: ParserError[];
 }
 
+/**
+ * 
+ */
 export interface ParserError {
+	/**
+	 * 
+	 */
 	expected: Token;
+	/**
+	 * 
+	 */
 	got: Token;
-	message?: string;
 }
 
+/**
+ * 
+ */
 export interface IParser<T> {
+	/**
+	 * @param tokens
+	 * @return 
+	 */
 	(tokens: Token[]): IParserResult<T>;
 }
 
+/**
+ * @param parser
+ * @return 
+ */
 export function many<T>(parser: IParser<T>): IParser<T[]> {
 	return (tokens) => {
 		let rest = tokens;
@@ -43,6 +80,11 @@ export function many<T>(parser: IParser<T>): IParser<T[]> {
 	};
 }
 
+/**
+ * @param parser
+ * @param fallback
+ * @return 
+ */
 export function optional<T>(parser: IParser<T>, fallback: T = null): IParser<T> {
 	return (tokens) => {
 		let result = parser(tokens);
@@ -55,12 +97,20 @@ export function optional<T>(parser: IParser<T>, fallback: T = null): IParser<T> 
 	};
 }
 
+/**
+ * @param value
+ * @return 
+ */
 export function constant<T>(value: T): IParser<T> {
 	return (tokens) => {
 		return { success: true, consumed: false, value, rest: tokens, errors: [] };
 	};
 }
 
+/**
+ * @param f
+ * @return 
+ */
 export function create<T>(f: () => IterableIterator<IParser<any> | T>): IParser<T> {
 	return (tokens) => {
 		let generator = f();
@@ -91,6 +141,11 @@ export function create<T>(f: () => IterableIterator<IParser<any> | T>): IParser<
 	};
 }
 
+/**
+ * @param p1
+ * @param p2
+ * @return
+ */
 export function combine<T1, T2>(p1: IParser<T1>, p2: IParser<T2>): IParser<[T1, T2]> {
 	return (tokens) => {
 		let r1 = p1(tokens);
@@ -112,6 +167,10 @@ export function combine<T1, T2>(p1: IParser<T1>, p2: IParser<T2>): IParser<[T1, 
 	};
 }
 
+/**
+ * @param parsers
+ * @return 
+ */
 export function choose<T>(...parsers: IParser<T>[]): IParser<T> {
 	return (tokens) => {
 		let errors = new Array<ParserError>();
@@ -148,6 +207,11 @@ export function choose_backtracking<T>(...parsers: IParser<T>[]): IParser<T> {
 	}
 }
 
+/**
+ * @param parser
+ * @param f
+ * @return
+ */
 export function map<T, R>(parser: IParser<T>, f: (value: T) => R): IParser<R> {
 	return (tokens) => {
 		let result = parser(tokens);
@@ -160,6 +224,10 @@ export function map<T, R>(parser: IParser<T>, f: (value: T) => R): IParser<R> {
 	}
 }
 
+/**
+ * @param parser
+ * @return
+ */
 export function exists<T>(parser: IParser<T>): IParser<boolean> {
 	return (tokens) => {
 		let result = parser(tokens);
@@ -167,6 +235,11 @@ export function exists<T>(parser: IParser<T>): IParser<boolean> {
 	}
 }
 
+/**
+ * @param parser
+ * @name
+ * @return
+ */
 export function name<T>(parser: IParser<T>, name: string): IParser<T> {
 	return (tokens) => {
 		let result = parser(tokens);
@@ -175,8 +248,7 @@ export function name<T>(parser: IParser<T>, name: string): IParser<T> {
 			let span = { text: name, position: -1 };
 			let expected = { kind: TokenKind.eof, span };
 			let got = result.errors[0].got;
-			let message = "Expected <" + name + "> but got '" + got.span.text + "'.";
-			let error = { expected, got, message };
+			let error = { expected, got };
 			result.errors = [error];
 		}
 
@@ -184,39 +256,29 @@ export function name<T>(parser: IParser<T>, name: string): IParser<T> {
 	}
 }
 
+/**
+ * @param kind
+ * @param text
+ * @return
+ */
 export function token(kind: TokenKind, text?: string): IParser<TextSpan> {
 	return (tokens) => {
 		if (tokens && tokens.length > 0 && tokens[0].kind === kind && (typeof (text) === "undefined" || tokens[0].span.text === text)) {
 			let rest = tokens.slice(1);
 			return { success: true, consumed: true, value: tokens[0].span, rest, errors: [] };
 		} else {
-			let expected = { kind, span: { text, position: -1 } };
-			let got = tokens[0];
-
-			let message = "Expected " + (typeof (text) === "undefined" ? TokenKind[kind] : "'" + text + "'") + " but got '" + got.span.text + "'.";
-
-			let error = { expected, got, message };
+			let span = { text, position: -1 };
+			let expected = { kind, span };
+			let error = { expected, got: tokens[0] };
 
 			return { success: false, consumed: false, value: undefined, rest: tokens, errors: [error] };
 		}
 	};
 }
 
-function get_caller(): string {
-	let exception = <any>new Error();
-	let stack = <string>exception.stack;
-
-	const pattern = /(\S+)@(.+?):(\d+):(\d+)/g;
-	pattern.exec(stack);
-	pattern.exec(stack);
-	let match = pattern.exec(stack);
-	return match[1];
-}
-
 export function fail<T>(): IParser<T> {
-	let caller = "unknown" /* get_caller() */;
 	return (tokens) => {
-		let error = { expected: <Token>null, got: <Token>null, message: "Not implemented: " + caller };
+		let error = { expected: <Token>null, got: <Token>null };
 		return { success: false, consumed: false, value: undefined, rest: tokens, errors: [error] };
 	};
 }
