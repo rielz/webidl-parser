@@ -1,2 +1,4 @@
 *.ts text=auto eol=crlf
-*.tsconfig text=auto eol=crlf
+*.json text=auto eol=crlf
+*.html text=auto eol=crlf
+*.css text=auto eol=crlf
